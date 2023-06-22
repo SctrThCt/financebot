@@ -11,7 +11,9 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import stc.monitoring.financebot.config.BotConfig;
+import stc.monitoring.financebot.model.Transaction;
 import stc.monitoring.financebot.model.WhiteListUser;
+import stc.monitoring.financebot.repository.TransactionRepository;
 import stc.monitoring.financebot.repository.WhiteListRepository;
 
 import java.util.HashMap;
@@ -25,21 +27,24 @@ import static stc.monitoring.financebot.service.Buttons.*;
 public class TelegramBot extends TelegramLongPollingBot {
 
     HashMap<Long, StringBuffer> messages = new HashMap<>();
+    HashMap<Long, Transaction> transactions = new HashMap<>();
     HashMap<Long, Integer> amounts = new HashMap<>();
 
     Map<Long, Long> whiteList;
 
     private final WhiteListRepository whiteListRepository;
+    private final TransactionRepository transactionRepository;
     private final BotConfig config;
 
 
-    public TelegramBot(BotConfig config, WhiteListRepository whiteListRepository) {
+    public TelegramBot(BotConfig config, WhiteListRepository whiteListRepository, TransactionRepository transactionRepository) {
 
         super(config.getToken());
         this.config = config;
         this.whiteListRepository = whiteListRepository;
         whiteList = whiteListRepository.
                 findAll().stream().collect(Collectors.toMap(WhiteListUser::getTelegramId, WhiteListUser::getId));
+        this.transactionRepository = transactionRepository;
     }
 
     @Override
@@ -65,6 +70,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                         sendMessage(new SendMessage(String.valueOf(chatId), "Регистрация пройдена"));
                         break;
                     default:
+
                         if (!isAuthorized(userId)) {
                             sendMessage(new SendMessage(String.valueOf(chatId), "Неавторизованный доступ"));
                             break;
@@ -72,6 +78,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                         try {
                             amounts.put(userId, Util.checkIfCorrectPositiveNumber(text));
                             messages.put(userId, new StringBuffer("Вы "));
+                            Transaction t = new Transaction();
+                            t.setAmount(Util.checkIfCorrectPositiveNumber(text));
+                            transactions.put(userId,t);
                             startMoneyRecord(chatId);
                         } catch (NumberFormatException e) {
                             sendMessage(new SendMessage(String.valueOf(chatId), "Команда не распознана"));
@@ -87,6 +96,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case BUTTON_SPEND:
                     messages.get(userId).append("потратили ").append(amounts.get(userId)).append(" на ");
                     updateMessage("Выберите категорию", chatId, messageId, getSpendingCategories());
+                    transactions.get(userId).setAmount(transactions.get(userId).getAmount()*-1);
                     break;
                 case BUTTON_EARN:
                     messages.get(userId).append("заработали ").append(amounts.get(userId)).append(" с ");

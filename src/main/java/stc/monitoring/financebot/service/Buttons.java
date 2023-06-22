@@ -2,9 +2,12 @@ package stc.monitoring.financebot.service;
 
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import stc.monitoring.financebot.model.Category;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Buttons {
 
@@ -43,22 +46,22 @@ public class Buttons {
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> buttons = new ArrayList<>();
 
-        InlineKeyboardButton button1 = new InlineKeyboardButton();
-        button1.setText("Продукты");
-        button1.setCallbackData(BUTTON_GRC);
+        List<Category> categories = Arrays.stream(Category.values())
+                .filter(e->e.toString().startsWith("OUTCOME"))
+                .collect(Collectors.toList());
 
-        InlineKeyboardButton button2 = new InlineKeyboardButton();
-        button2.setText("Кафешечька");
-        button2.setCallbackData(BUTTON_RST);
-
-        InlineKeyboardButton button3 = new InlineKeyboardButton();
-        button3.setText("Прост))0)0");
-        button3.setCallbackData(BUTTON_OTHR);
-
-        buttons.add(button1);
-        buttons.add(button2);
-        buttons.add(button3);
-
+        for(int i = 0; i < categories.size();i++)
+        {
+            if (i%3==0)
+            {
+                rows.add(buttons);
+                buttons = new ArrayList<>();
+            }
+                InlineKeyboardButton b = new InlineKeyboardButton();
+                b.setText(categories.get(i).getDesc());
+                b.setCallbackData(categories.get(i).toString());
+                buttons.add(b);
+        }
         rows.add(buttons);
         out.setKeyboard(rows);
         return out;
@@ -70,21 +73,14 @@ public class Buttons {
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> buttons = new ArrayList<>();
 
-        InlineKeyboardButton button1 = new InlineKeyboardButton();
-        button1.setText("Зарплата");
-        button1.setCallbackData(BUTTON_SLR);
-
-        InlineKeyboardButton button2 = new InlineKeyboardButton();
-        button2.setText("Перевели");
-        button2.setCallbackData(BUTTON_GIFT);
-
-        InlineKeyboardButton button3 = new InlineKeyboardButton();
-        button3.setText("Нашли");
-        button3.setCallbackData(BUTTON_FOUND);
-
-        buttons.add(button1);
-        buttons.add(button2);
-        buttons.add(button3);
+        for (Category c:Category.values()) {
+            if (c.toString().startsWith("INCOME")) {
+                InlineKeyboardButton b = new InlineKeyboardButton();
+                b.setText(c.getDesc());
+                b.setCallbackData(c.toString());
+                buttons.add(b);
+            }
+        }
 
         rows.add(buttons);
         out.setKeyboard(rows);
