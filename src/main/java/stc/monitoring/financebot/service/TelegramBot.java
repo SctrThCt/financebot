@@ -11,8 +11,12 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import stc.monitoring.financebot.config.BotConfig;
+import stc.monitoring.financebot.model.WhiteListUser;
+import stc.monitoring.financebot.repository.WhiteListRepository;
 
 import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static stc.monitoring.financebot.service.Buttons.*;
 
@@ -23,14 +27,19 @@ public class TelegramBot extends TelegramLongPollingBot {
     HashMap<Long, StringBuffer> messages = new HashMap<>();
     HashMap<Long, Integer> amounts = new HashMap<>();
 
+    Map<Long, Long> whiteList;
+
+    private final WhiteListRepository whiteListRepository;
     private final BotConfig config;
 
 
-    public TelegramBot(BotConfig config) {
+    public TelegramBot(BotConfig config, WhiteListRepository whiteListRepository) {
 
         super(config.getToken());
         this.config = config;
-
+        this.whiteListRepository = whiteListRepository;
+        whiteList = whiteListRepository.
+                findAll().stream().collect(Collectors.toMap(WhiteListUser::getTelegramId, WhiteListUser::getId));
     }
 
     @Override
@@ -39,22 +48,34 @@ public class TelegramBot extends TelegramLongPollingBot {
             long userId = update.getMessage().getChat().getId();
             String text = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
-            if (text.startsWith("/")) {
+            if (text.equals("/start")) {
+                start(chatId, update.getMessage().getChat());
+            } else if (text.startsWith("/")) {
                 switch (text) {
-                    case "/start":
-                        start(chatId, update.getMessage().getChat());
-                        break;
                     default:
                         sendMessage(new SendMessage(String.valueOf(chatId), "Команда не распознана"));
                 }
 
             } else {
-                try {
-                    amounts.put(userId, Util.checkIfCorrectPositiveNumber(text));
-                    messages.put(userId, new StringBuffer("Вы "));
-                    startMoneyRecord(chatId);
-                } catch (NumberFormatException e) {
-                    sendMessage(new SendMessage(String.valueOf(chatId), "Команда не распознана"));
+                switch (text) {
+                    case "password":
+                        whiteListRepository.save(new WhiteListUser(update.getMessage().getFrom().getId()));
+                        whiteList = whiteListRepository.
+                                findAll().stream().collect(Collectors.toMap(WhiteListUser::getTelegramId, WhiteListUser::getId));
+                        sendMessage(new SendMessage(String.valueOf(chatId), "Регистрация пройдена"));
+                        break;
+                    default:
+                        if (!isAuthorized(userId)) {
+                            sendMessage(new SendMessage(String.valueOf(chatId), "Неавторизованный доступ"));
+                            break;
+                        }
+                        try {
+                            amounts.put(userId, Util.checkIfCorrectPositiveNumber(text));
+                            messages.put(userId, new StringBuffer("Вы "));
+                            startMoneyRecord(chatId);
+                        } catch (NumberFormatException e) {
+                            sendMessage(new SendMessage(String.valueOf(chatId), "Команда не распознана"));
+                        }
                 }
             }
         } else if (update.hasCallbackQuery()) {
@@ -85,7 +106,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void start(long chatId, Chat chat) {
-        String response = String.format("Привет, %s! \n \n UserID: %d", chat.getFirstName(), chat.getId());
+        String response = String.format("Привет, %s! \n Для продолжения введи пароль", chat.getFirstName());
         sendMessage(new SendMessage(String.valueOf(chatId), response));
     }
 
@@ -125,6 +146,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         return config.getBotName();
     }
 
+    private boolean isAuthorized(long userId) {
+        return whiteList.containsKey(userId);
+    }
     public void processUpdateMessage(EditMessageText message) {
         try {
             execute(message);
