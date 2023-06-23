@@ -12,6 +12,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import stc.monitoring.financebot.config.BotConfig;
 import stc.monitoring.financebot.model.Transaction;
+import stc.monitoring.financebot.model.Type;
 import stc.monitoring.financebot.model.WhiteListUser;
 import stc.monitoring.financebot.repository.TransactionRepository;
 import stc.monitoring.financebot.repository.WhiteListRepository;
@@ -20,6 +21,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static stc.monitoring.financebot.model.Type.TYPE_INCOME;
+import static stc.monitoring.financebot.model.Type.TYPE_OUTCOME;
 import static stc.monitoring.financebot.service.KeyboardConstructor.*;
 
 @Component
@@ -88,26 +91,18 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
             }
         } else if (update.hasCallbackQuery()) {
+
             long userId = update.getCallbackQuery().getMessage().getChat().getId();
             long chatId = update.getCallbackQuery().getMessage().getChatId();
             int messageId = update.getCallbackQuery().getMessage().getMessageId();
+            String callbackData = update.getCallbackQuery().getData();
 
-            switch (update.getCallbackQuery().getData()) {
-                case BUTTON_SPEND:
-                    messages.get(userId).append("потратили ").append(amounts.get(userId)).append(" на ");
-                    updateMessage("Выберите категорию", chatId, messageId, getSpendingCategories());
-                    transactions.get(userId).setAmount(transactions.get(userId).getAmount()*-1);
+            switch (callbackData.split("_")[0]) {
+
+                case "TYPE":
+                    handleType(callbackData,transactions.get(userId),chatId,messageId,userId);
                     break;
-                case BUTTON_EARN:
-                    messages.get(userId).append("заработали ").append(amounts.get(userId)).append(" с ");
-                    updateMessage("Выберите категорию", chatId, messageId, getEarningCategories());
-                    break;
-                case BUTTON_GRC:
-                case BUTTON_RST:
-                case BUTTON_OTHR:
-                case BUTTON_FOUND:
-                case BUTTON_GIFT:
-                case BUTTON_SLR:
+                case "CATEGORY":
                     messages.get(userId).append(update.getCallbackQuery().getData());
                     updateMessage(messages.get(userId).toString(), chatId, messageId, null);
                     break;
@@ -165,5 +160,21 @@ public class TelegramBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             log.warn("Всё сломалось");
         }
+    }
+
+    private void handleType(String data, Transaction transaction, long chatId, int messageId, long userId) {
+        Type type = Type.valueOf(data);
+        switch (type) {
+            case TYPE_OUTCOME:
+                messages.get(userId).append("потратили ").append(amounts.get(userId)).append(" на ");
+                updateMessage("Выберите категорию", chatId, messageId, getSpendingCategories());
+                transactions.get(userId).setAmount(transactions.get(userId).getAmount()*-1);
+                break;
+            case TYPE_INCOME:
+                messages.get(userId).append("заработали ").append(amounts.get(userId)).append(" с ");
+                updateMessage("Выберите категорию", chatId, messageId, getEarningCategories());
+                break;
+        }
+        transaction.setType(type);
     }
 }

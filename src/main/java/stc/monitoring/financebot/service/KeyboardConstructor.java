@@ -46,7 +46,7 @@ public class KeyboardConstructor {
         List<InlineKeyboardButton> buttons = new ArrayList<>();
 
         List<Category> categories = Arrays.stream(Category.values())
-                .filter(e -> e.toString().startsWith("OUTCOME"))
+                .filter(e -> e.toString().contains("OUTCOME"))
                 .collect(Collectors.toList());
 
         for (int i = 0; i < categories.size(); i++) {
@@ -72,7 +72,7 @@ public class KeyboardConstructor {
         List<InlineKeyboardButton> buttons = new ArrayList<>();
 
         for (Category c : Category.values()) {
-            if (c.toString().startsWith("INCOME")) {
+            if (c.toString().contains("INCOME")) {
                 InlineKeyboardButton b = new InlineKeyboardButton();
                 b.setText(c.getDesc());
                 b.setCallbackData(c.toString());
@@ -85,6 +85,7 @@ public class KeyboardConstructor {
         out.setKeyboard(rows);
         return out;
     }
+
     private static void addCancelButton(List<List<InlineKeyboardButton>> rows) {
         List<InlineKeyboardButton> button = new ArrayList<>();
         InlineKeyboardButton cancelButton = new InlineKeyboardButton();

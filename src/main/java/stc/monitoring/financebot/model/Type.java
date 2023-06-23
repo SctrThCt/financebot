@@ -12,9 +12,4 @@ public enum Type {
 
 
     private final String desc;
-
-    @Override
-    public String toString() {
-        return name().substring(5);
-    }
 }

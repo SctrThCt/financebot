@@ -19,8 +19,8 @@ public class Transaction extends BaseEntity {
     private long amount;
     @Column(name = "category")
     private Category category;
-    @Column(name = "source")
-    private String source;
+    @Column(name = "type")
+    private Type type;
     @Column(name = "localDate")
-    private LocalDate localDate;
+    private LocalDate created;
 }
