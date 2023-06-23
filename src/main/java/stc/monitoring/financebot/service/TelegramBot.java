@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static stc.monitoring.financebot.service.Buttons.*;
+import static stc.monitoring.financebot.service.KeyboardConstructor.*;
 
 @Component
 @Slf4j

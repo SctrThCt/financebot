@@ -3,13 +3,14 @@ package stc.monitoring.financebot.service;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import stc.monitoring.financebot.model.Category;
+import stc.monitoring.financebot.model.Type;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class Buttons {
+public class KeyboardConstructor {
 
     public static final String BUTTON_SPEND = "SPEND";
     public static final String BUTTON_EARN = "EARN";
@@ -20,23 +21,21 @@ public class Buttons {
     public static final String BUTTON_SLR = "SLR";
     public static final String BUTTON_GIFT = "GIFT";
     public static final String BUTTON_FOUND = "FOUND";
+    public static final String BUTTON_CANCEL = "CANCEL";
 
     public static InlineKeyboardMarkup getTransactionTypeButtons() {
         InlineKeyboardMarkup out = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> buttons = new ArrayList<>();
 
-        InlineKeyboardButton earnButton = new InlineKeyboardButton();
-        earnButton.setText("Доход");
-        earnButton.setCallbackData(BUTTON_EARN);
-
-        InlineKeyboardButton spentButton = new InlineKeyboardButton();
-        spentButton.setText("Расход");
-        spentButton.setCallbackData(BUTTON_SPEND);
-
-        buttons.add(earnButton);
-        buttons.add(spentButton);
+        for (Type t : Type.values()) {
+            InlineKeyboardButton b = new InlineKeyboardButton();
+            b.setText(t.getDesc());
+            b.setCallbackData(t.toString());
+            buttons.add(b);
+        }
         rows.add(buttons);
+        addCancelButton(rows);
         out.setKeyboard(rows);
         return out;
     }
@@ -47,22 +46,21 @@ public class Buttons {
         List<InlineKeyboardButton> buttons = new ArrayList<>();
 
         List<Category> categories = Arrays.stream(Category.values())
-                .filter(e->e.toString().startsWith("OUTCOME"))
+                .filter(e -> e.toString().startsWith("OUTCOME"))
                 .collect(Collectors.toList());
 
-        for(int i = 0; i < categories.size();i++)
-        {
-            if (i%3==0)
-            {
+        for (int i = 0; i < categories.size(); i++) {
+            if (i % 3 == 0) {
                 rows.add(buttons);
                 buttons = new ArrayList<>();
             }
-                InlineKeyboardButton b = new InlineKeyboardButton();
-                b.setText(categories.get(i).getDesc());
-                b.setCallbackData(categories.get(i).toString());
-                buttons.add(b);
+            InlineKeyboardButton b = new InlineKeyboardButton();
+            b.setText(categories.get(i).getDesc());
+            b.setCallbackData(categories.get(i).toString());
+            buttons.add(b);
         }
         rows.add(buttons);
+        addCancelButton(rows);
         out.setKeyboard(rows);
         return out;
     }
@@ -73,7 +71,7 @@ public class Buttons {
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> buttons = new ArrayList<>();
 
-        for (Category c:Category.values()) {
+        for (Category c : Category.values()) {
             if (c.toString().startsWith("INCOME")) {
                 InlineKeyboardButton b = new InlineKeyboardButton();
                 b.setText(c.getDesc());
@@ -83,7 +81,16 @@ public class Buttons {
         }
 
         rows.add(buttons);
+        addCancelButton(rows);
         out.setKeyboard(rows);
         return out;
+    }
+    private static void addCancelButton(List<List<InlineKeyboardButton>> rows) {
+        List<InlineKeyboardButton> button = new ArrayList<>();
+        InlineKeyboardButton cancelButton = new InlineKeyboardButton();
+        cancelButton.setCallbackData(BUTTON_CANCEL);
+        cancelButton.setText("Отмена");
+        button.add(cancelButton);
+        rows.add(button);
     }
 }
