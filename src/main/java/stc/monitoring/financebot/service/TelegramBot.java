@@ -11,6 +11,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import stc.monitoring.financebot.config.BotConfig;
+import stc.monitoring.financebot.model.Category;
 import stc.monitoring.financebot.model.Transaction;
 import stc.monitoring.financebot.model.Type;
 import stc.monitoring.financebot.model.WhiteListUser;
@@ -103,8 +104,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     handleType(callbackData,transactions.get(userId),chatId,messageId,userId);
                     break;
                 case "CATEGORY":
-                    messages.get(userId).append(update.getCallbackQuery().getData());
-                    updateMessage(messages.get(userId).toString(), chatId, messageId, null);
+                    handleCategory(callbackData,transactions.get(userId),chatId,messageId,userId);
                     break;
             }
         }
@@ -154,13 +154,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     private boolean isAuthorized(long userId) {
         return whiteList.containsKey(userId);
     }
-    public void processUpdateMessage(EditMessageText message) {
-        try {
-            execute(message);
-        } catch (TelegramApiException e) {
-            log.warn("Всё сломалось");
-        }
-    }
 
     private void handleType(String data, Transaction transaction, long chatId, int messageId, long userId) {
         Type type = Type.valueOf(data);
@@ -168,7 +161,6 @@ public class TelegramBot extends TelegramLongPollingBot {
             case TYPE_OUTCOME:
                 messages.get(userId).append("потратили ").append(amounts.get(userId)).append(" на ");
                 updateMessage("Выберите категорию", chatId, messageId, getSpendingCategories());
-                transactions.get(userId).setAmount(transactions.get(userId).getAmount()*-1);
                 break;
             case TYPE_INCOME:
                 messages.get(userId).append("заработали ").append(amounts.get(userId)).append(" с ");
@@ -176,5 +168,13 @@ public class TelegramBot extends TelegramLongPollingBot {
                 break;
         }
         transaction.setType(type);
+    }
+
+    private void handleCategory(String data, Transaction transaction, long chatId, int messageId, long userId) {
+        Category category = Category.valueOf((data));
+        transaction.setCategory(category);
+        transactionRepository.save(transaction);
+        messages.get(userId).append(data);
+        updateMessage(messages.get(userId).toString(), chatId, messageId, null);
     }
 }
