@@ -26,6 +26,14 @@ public class Transaction extends BaseEntity {
     @Column(name = "type")
     private Type type;
 
+    @ManyToOne
+    @JoinColumn(name = "currency_id")
+    private Currency currency;
+
     @Column(name = "localDate", columnDefinition = "timestamp default now()",nullable = false)
     private Date created = new Date();
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "wallet_id")
+    private Wallet wallet;
 }
