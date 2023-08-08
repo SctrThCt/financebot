@@ -9,9 +9,9 @@ spring:
     show-sql: true
     open-in-view: false
   # https://stackoverflow.com/a/67678945/548473
-    defer-datasource-initialization: true
+    defer-datasource-initialization: false
     hibernate:
-      ddl-auto: create
+      ddl-auto: validate
     properties:
     #  http://docs.jboss.org/hibernate/orm/5.3/userguide/html_single/Hibernate_User_Guide.html#configurations
       hibernate:
@@ -23,3 +23,6 @@ spring:
     url: jdbc:postgresql://localhost:5432/financebot #указать своё
     username: user #указать своё
     password: password #указать своё
+  liquibase:
+    change-log: classpath:db/changelog/changelog-master.yml
+    enabled: true

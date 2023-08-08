@@ -3,6 +3,7 @@ package stc.monitoring.financebot.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
@@ -11,19 +12,16 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import stc.monitoring.financebot.config.BotConfig;
-import stc.monitoring.financebot.model.Category;
-import stc.monitoring.financebot.model.Transaction;
-import stc.monitoring.financebot.model.Type;
-import stc.monitoring.financebot.model.WhiteListUser;
+import stc.monitoring.financebot.model.*;
+import stc.monitoring.financebot.repository.CurrencyRepository;
 import stc.monitoring.financebot.repository.TransactionRepository;
 import stc.monitoring.financebot.repository.WhiteListRepository;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static stc.monitoring.financebot.model.Type.TYPE_INCOME;
-import static stc.monitoring.financebot.model.Type.TYPE_OUTCOME;
 import static stc.monitoring.financebot.service.KeyboardConstructor.*;
 
 @Component
@@ -38,10 +36,12 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private final WhiteListRepository whiteListRepository;
     private final TransactionRepository transactionRepository;
+    private final CurrencyRepository currencyRepository;
+    private final RateService rateService;
     private final BotConfig config;
 
 
-    public TelegramBot(BotConfig config, WhiteListRepository whiteListRepository, TransactionRepository transactionRepository) {
+    public TelegramBot(BotConfig config, WhiteListRepository whiteListRepository, TransactionRepository transactionRepository, CurrencyRepository currencyRepository, RateService rateService) {
 
         super(config.getToken());
         this.config = config;
@@ -49,6 +49,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         whiteList = whiteListRepository.
                 findAll().stream().collect(Collectors.toMap(WhiteListUser::getTelegramId, WhiteListUser::getId));
         this.transactionRepository = transactionRepository;
+        this.currencyRepository = currencyRepository;
+        this.rateService = rateService;
     }
 
     @Override
@@ -59,7 +61,14 @@ public class TelegramBot extends TelegramLongPollingBot {
             long chatId = update.getMessage().getChatId();
             if (text.equals("/start")) {
                 start(chatId, update.getMessage().getChat());
-            } else if (text.startsWith("/")) {
+            }
+            else if (text.equals("/currencies")) {
+                currencies(chatId);
+            }
+            else if (text.equals("/rates")) {
+                rates(chatId);
+            }
+            else if (text.startsWith("/")) {
                 switch (text) {
                     default:
                         sendMessage(new SendMessage(String.valueOf(chatId), "Команда не распознана"));
@@ -145,6 +154,11 @@ public class TelegramBot extends TelegramLongPollingBot {
             log.warn("Всё сломалось");
         }
     }
+    private void currencies(long chatId) {
+        StringBuilder response = new StringBuilder();
+        currencyRepository.getAllByInUseTrue().forEach(c->response.append(c.getName()+"\n"));
+        sendMessage(new SendMessage(String.valueOf(chatId),"Выбранные валюты: \n"+response.toString()));
+    }
 
     @Override
     public String getBotUsername() {
@@ -176,5 +190,18 @@ public class TelegramBot extends TelegramLongPollingBot {
         transactionRepository.save(transaction);
         messages.get(userId).append(data);
         updateMessage(messages.get(userId).toString(), chatId, messageId, null);
+    }
+
+    void rates(long chatId) {
+        StringBuilder response = new StringBuilder("Обновленные курсы валют на ");
+        List<Rate> rateList = rateService.getCurrencyRates();
+        response.append(rateList.get(0).getRequestDate()).append(":\n");
+        rateList.forEach(rate->
+                response.append(rate.getCurrency().getName())
+                        .append(": ")
+                        .append(rate.getRate())
+                        .append("\n"));
+
+        sendMessage(new SendMessage(String.valueOf(chatId),response.toString()));
     }
 }

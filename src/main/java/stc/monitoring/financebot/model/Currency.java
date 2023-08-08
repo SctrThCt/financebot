@@ -13,4 +13,10 @@ import lombok.Setter;
 public class Currency extends BaseEntity {
     @Column(name = "code")
     private String code;
+
+    @Column(name = "in_use")
+    private boolean inUse;
+
+    @Column(name = "name")
+    private String name;
 }
