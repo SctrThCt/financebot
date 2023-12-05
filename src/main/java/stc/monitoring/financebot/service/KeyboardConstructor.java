@@ -3,7 +3,9 @@ package stc.monitoring.financebot.service;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import stc.monitoring.financebot.model.Category;
+import stc.monitoring.financebot.model.Currency;
 import stc.monitoring.financebot.model.Type;
+import stc.monitoring.financebot.model.Wallet;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,16 +13,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class KeyboardConstructor {
-
-    public static final String BUTTON_SPEND = "SPEND";
-    public static final String BUTTON_EARN = "EARN";
-
-    public static final String BUTTON_GRC = "GRC";
-    public static final String BUTTON_RST = "RST";
-    public static final String BUTTON_OTHR = "OTHR";
-    public static final String BUTTON_SLR = "SLR";
-    public static final String BUTTON_GIFT = "GIFT";
-    public static final String BUTTON_FOUND = "FOUND";
     public static final String BUTTON_CANCEL = "CANCEL";
 
     public static InlineKeyboardMarkup getTransactionTypeButtons() {
@@ -86,6 +78,46 @@ public class KeyboardConstructor {
         return out;
     }
 
+    public static InlineKeyboardMarkup getCurrencies(List<Currency> currencies) {
+        InlineKeyboardMarkup out = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> buttons = new ArrayList<>();
+
+        for (int i = 0; i < currencies.size(); i++) {
+            if (i % 3 == 0) {
+                rows.add(buttons);
+                buttons = new ArrayList<>();
+            }
+            InlineKeyboardButton b = new InlineKeyboardButton();
+            b.setText(currencies.get(i).getName());
+            b.setCallbackData("CURRENCY_" + currencies.get(i).getCode());
+            buttons.add(b);
+        }
+
+        rows.add(buttons);
+        addCancelButton(rows);
+        out.setKeyboard(rows);
+        return out;
+    }
+
+    public static InlineKeyboardMarkup getWalletsForCurrency(List<Wallet> wallets) {
+        InlineKeyboardMarkup out = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> buttons = new ArrayList<>();
+
+        for (Wallet w : wallets) {
+            InlineKeyboardButton b = new InlineKeyboardButton();
+            b.setText(w.getType().getDesc());
+            b.setCallbackData(w.getType().toString());
+            buttons.add(b);
+        }
+
+        rows.add(buttons);
+        addCancelButton(rows);
+        out.setKeyboard(rows);
+        return out;
+    }
+
     private static void addCancelButton(List<List<InlineKeyboardButton>> rows) {
         List<InlineKeyboardButton> button = new ArrayList<>();
         InlineKeyboardButton cancelButton = new InlineKeyboardButton();
@@ -94,4 +126,5 @@ public class KeyboardConstructor {
         button.add(cancelButton);
         rows.add(button);
     }
+
 }
